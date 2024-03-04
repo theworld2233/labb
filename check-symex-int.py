@@ -21,6 +21,7 @@ def f(x):
 
 def test_f():
     i = fuzzy.mk_int('i', 0)
+    print('i==:', i)
     v = f(i)
     return v
 

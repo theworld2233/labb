@@ -48,6 +48,7 @@ def test2_setup():
 def test_f():
     db = test1_setup()
     s = fuzzy.mk_str('s', '')
+    print('s..======',s)
     r = db.query(Test1).get(s)
     if r is None:
         v = None
@@ -91,7 +92,6 @@ t2c.value = 'yy'
 t2.add(t2c)
 t2.commit()
 
-print('Testing f..')
 f_results = fuzzy.concolic_execs(test_f, verbose=10)
 f_expected = (924, 22)
 if all(x in f_results for x in f_expected):

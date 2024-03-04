@@ -185,7 +185,12 @@ class sym_minus(sym_binop):
 
 ## Exercise 2: your code here.
 ## Implement AST nodes for division and multiplication.
-
+class sym_div(sym_binop):
+  def _z3expr(self):
+    return z3expr(self.a)/z3expr(self.b)
+class sym_mul(sym_binop):
+  def _z3expr(self):
+    return z3expr(self.a)*z3expr(self.b)
 ## String operations
 
 class sym_str(sym_ast):
@@ -493,7 +498,25 @@ class concolic_int(int):
   def __rsub__(self, o):
     res = o - self.__v
     return concolic_int(sym_minus(ast(o), ast(self)), res)
+  def __mul__(self,o):
+    if isinstance(o,concolic_int):
+      res = o.__v * self.__v
+    else:
+      res=self.__v*o
+    return concolic_int(sym_mul(ast(self),ast(o)),res)
+  def __truediv__(self, o):
+    if isinstance(o, concolic_int):
+      res = self.__v / o.__v
+    else:
+      res = self.__v / o
+    return concolic_int(sym_div(ast(self), ast(o)), res)
 
+  def __floordiv__(self, o):
+    if isinstance(o, concolic_int):
+      res = self.__v // o.__v
+    else:
+      res = self.__v // o
+    return concolic_int(sym_div(ast(self), ast(o)), res)   
   ## Exercise 2: your code here.
   ## Implement symbolic division and multiplication.
 
@@ -538,7 +561,14 @@ class concolic_str(str):
 
   def __bool__(self):
     return concolic_bool(sym_not(sym_eq(ast(self), ast(''))), self.__v != '')
-
+  def __len__(self):
+    return concolic_int(sym_length(ast(self)),len(self.__v))
+  def __contains__(self,o):
+    if isinstance(o,concolic_str):
+      res=o.__v in self.__v
+    else:
+      res=o in self.__v
+    return concolic_bool(sym_contains(ast(self),ast(o)),res)   
   ## Exercise 7: your code here.
   ## Implement symbolic versions of string length (override __len__)
   ## and contains (override __contains__).
@@ -674,7 +704,14 @@ class concolic_bytes(bytes):
   def __radd__(self, o):
     res = o + self.__v
     return concolic_bytes(sym_concat(ast(o), ast(self)), res)
-
+  def __len__(self):
+    return concolic_int(sym_length(ast(self)),len(self.__v))
+  def __contains__(self,o):
+    if isinstance(o,concolic_bytes):
+      res=o.__v in self.__v
+    else:
+      res=o in self.__v
+    return concolic_bool(sym_contains(ast(self),ast(o),res))    
   ## Exercise 7: your code here.
   ## Implement symbolic versions of bytes length (override __len__)
   ## and contains (override __contains__).
@@ -900,7 +937,7 @@ def concolic_exec_input(testfunc, concrete_values, verbose = 0):
   # concrete_values.
   concrete_values.mk_global()
   v = testfunc()
-
+  print('v=:', v)
   if verbose > 1:
     print('Test generated', len(cur_path_constr), 'branches:')
     for (c, caller) in zip(cur_path_constr, cur_path_constr_callers):
@@ -922,7 +959,11 @@ def concolic_force_branch(b, branch_conds, branch_callers, verbose = 1):
   ## https://docs.python.org/3/tutorial/controlflow.html#unpacking-argument-lists
 
   constraint = None
-
+  b_cond = branch_conds[b]
+  ##if (b_cond != const_bool(True)):
+  constraint = sym_not(b_cond)
+  for i in range(b):
+    constraint = sym_and(constraint, branch_conds[i])
   if verbose > 2:
     callers = branch_callers[b]
     print('Trying to branch at %s:%d:' % (callers[0], callers[1]))
@@ -942,12 +983,20 @@ def concolic_force_branch(b, branch_conds, branch_callers, verbose = 1):
 def concolic_find_input(constraint, ok_names, verbose=0):
   ## Invoke Z3, along the lines of:
   ##
-  ##     (ok, model) = fork_and_check(constr)
-  ##
+  (ok, model) = fork_and_check(constraint)
+  cv = ConcreteValues()
+  if ok == z3.sat:
+    sat = True
+    res_names = model.keys() if ok_names is None else ok_names
+    for k in res_names:
+      cv.add(k, model[k])
+  else:
+    sat = False
+  return sat, cv
   ## If Z3 was able to find example inputs that solve this
   ## constraint (i.e., ok == z3.sat), make a new input set
   ## containing the values from Z3's model, and return it.
-  return False, ConcreteValues()
+ 
 
 # Concolic execute func for many different paths and return all
 # computed results for those different paths.
@@ -966,10 +1015,24 @@ def concolic_execs(func, maxiter = 100, verbose = 0):
   while iter < maxiter and not inputs.empty():
     iter += 1
     concrete_values = inputs.get()
+    print('concrete_values', concrete_values)
     (r, branch_conds, branch_callers) = concolic_exec_input(func, concrete_values, verbose)
     if r not in outs:
       outs.append(r)
-
+    branch_len = len(branch_conds)
+# explore every branch
+    for b in range(branch_len):
+  # construct new constraint for negative branch
+      cur_constraint = concolic_force_branch(b, branch_conds, branch_callers)
+  # not in `checked` set, solve out the constraint
+      if cur_constraint not in checked:
+        checked.add(cur_constraint)
+        print('******',cur_constraint)
+        sat, cur_concrete_values = concolic_find_input(cur_constraint, None)
+    # satisfiable, add the dict for next round
+        if sat:
+          cur_concrete_values.inherit(concrete_values)
+          inputs.add(cur_concrete_values, branch_callers[b])
     ## Exercise 6: your code here.
     ##
     ## Here's a possible plan of attack:

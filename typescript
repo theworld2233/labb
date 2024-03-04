@@ -1,0 +1,33 @@
+Script started on 2024-03-04 15:03:19+08:00 [TERM="xterm-256color" TTY="/dev/pts/1" COLUMNS="85" LINES="38"]
+concrete_values {}
+Trying concrete value: {}
+Response: 404 NOT FOUND
+  Content-Type: text/html; charset=utf-8
+  Content-Length: 232
+  X-XSS-Protection: 0
+b'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">\n<title>404 Not Found</title>\n<h1>Not Found</h1>\n<p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>\n'
+v=: None
+****** Not(PrefixOf("//", Concat("trans", path)) == False)
+****** And(Not(Not(Concat("trans", path) == "") == True),
+    PrefixOf("//", Concat("trans", path)) == False)
+****** And(And(Not(PrefixOf("/", Concat("trans", path)) == False),
+        PrefixOf("//", Concat("trans", path)) == False),
+    Not(Concat("trans", path) == "") == True)
+****** And(And(And(Not(Not(Concat("trans", path) == "") == True),
+            PrefixOf("//", Concat("trans", path)) == False),
+        Not(Concat("trans", path) == "") == True),
+    PrefixOf("/", Concat("trans", path)) == False)
+****** And(And(And(And(Not(PrefixOf("/", Concat("trans", path)) ==
+                    False),
+                PrefixOf("//", Concat("trans", path)) ==
+                False),
+            Not(Concat("trans", path) == "") == True),
+        PrefixOf("/", Concat("trans", path)) == False),
+    Not(Concat("trans", path) == "") == True)
+Stopping after 1 iterations
+Exception ignored in: <function _removeHandlerRef at 0x7f77df6d54c0>
+Traceback (most recent call last):
+  File "/home/rft/.pyenv/versions/3.8.2/lib/python3.8/logging/__init__.py", line 834, in _removeHandlerRef
+NameError: name '__rewriter_in' is not defined
+
+Script done on 2024-03-04 15:03:29+08:00 [COMMAND_EXIT_CODE="0"]

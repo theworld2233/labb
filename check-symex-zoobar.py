@@ -8,6 +8,7 @@ import inspect
 import symex.importwrapper as importwrapper
 import symex.rewriter as rewriter
 import warnings
+from symex.rewriter import __rewriter_in
 
 importwrapper.rewrite_imports(rewriter.rewriter)
 warnings.filterwarnings("ignore", category=SyntaxWarning)
@@ -87,7 +88,17 @@ def test_stuff():
 
   ## Detect zoobar theft.
   ## When detected, call report_zoobar_theft()
-
+  balance2 = sum([p.zoobars for p in pdb.query(zoobar.zoodb.Person).all()])
+  if balance1 != balance2:
+    report_balance_mismatch()
+  udict = {}
+  for p in pdb.query(zoobar.zoodb.Person).all():
+    udict[p.username] = p
+  for t in tdb.query(zoobar.zoodb.Transfer).all():
+    udict.pop(t.sender)
+  for username in udict.keys():
+    if udict[username].zoobars < 10:
+      report_zoobar_theft()
 
 fuzzy.concolic_execs(test_stuff, maxiter=500, verbose=1)
 
